@@ -3,17 +3,33 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+type GradeItem = { grade: string; point: number }
+
 export default function AcademicRecordsPage() {
   const [rows, setRows] = useState<any[]>([])
-  const [form, setForm] = useState({ course_code: '', course_title: '', credit_units: 3, grade: 'A', grade_point: 5, semester: 1 })
+  const [grades, setGrades] = useState<GradeItem[]>([])
+  const [form, setForm] = useState({ course_code: '', course_title: '', credit_units: 3, grade: '', grade_point: 0, semester: 1 })
   const [message, setMessage] = useState('')
 
   async function load() {
     const supabase = createClient()
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) return
-    const { data } = await supabase.from('academic_records').select('id,course_code,course_title,credit_units,grade,grade_point,semester,created_at').eq('user_id', userData.user.id).order('created_at', { ascending: false })
+    const [{ data }, { data: profile }] = await Promise.all([
+      supabase.from('academic_records').select('id,course_code,course_title,credit_units,grade,grade_point,semester,created_at').eq('user_id', userData.user.id).order('created_at', { ascending: false }),
+      supabase.from('profiles').select('institution_id').eq('id', userData.user.id).maybeSingle(),
+    ])
     setRows(data || [])
+    const schemeQuery = profile?.institution_id
+      ? supabase.from('grading_schemes').select('id').eq('institution_id', profile.institution_id).order('is_default', { ascending: false }).limit(1).maybeSingle()
+      : supabase.from('grading_schemes').select('id').eq('is_default', true).limit(1).maybeSingle()
+    const { data: scheme } = await schemeQuery
+    if (scheme?.id) {
+      const { data: items } = await supabase.from('grading_scheme_items').select('grade,point').eq('grading_scheme_id', scheme.id).order('point', { ascending: false })
+      const configured = (items || []).map(item => ({ grade: item.grade, point: Number(item.point) }))
+      setGrades(configured)
+      if (!form.grade && configured[0]) setForm(current => ({ ...current, grade: configured[0].grade, grade_point: configured[0].point }))
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -32,7 +48,7 @@ export default function AcademicRecordsPage() {
     if (!userData.user) return
     const { error } = await supabase.from('academic_records').insert({ ...form, user_id: userData.user.id })
     if (error) setMessage(error.message)
-    else { setMessage('Course added.'); setForm({ course_code: '', course_title: '', credit_units: 3, grade: 'A', grade_point: 5, semester: 1 }); load() }
+    else { setMessage('Course added.'); setForm(current => ({ ...current, course_code: '', course_title: '' })); load() }
   }
 
   async function removeRecord(id: string) {
@@ -53,8 +69,8 @@ export default function AcademicRecordsPage() {
         <div className="eyebrow">ADD COURSE</div>
         <div className="grid grid-2"><div className="field"><label>Course code</label><input required value={form.course_code} onChange={e => setForm({ ...form, course_code: e.target.value.toUpperCase() })} placeholder="EEE 321" /></div><div className="field"><label>Credit units</label><input type="number" min="1" value={form.credit_units} onChange={e => setForm({ ...form, credit_units: Number(e.target.value) })} /></div></div>
         <div className="field"><label>Course title</label><input value={form.course_title} onChange={e => setForm({ ...form, course_title: e.target.value })} placeholder="Electrical Machines" /></div>
-        <div className="grid grid-2"><div className="field"><label>Grade</label><select value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value, grade_point: ({ A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 } as Record<string, number>)[e.target.value] ?? 0 })}><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option></select></div><div className="field"><label>Semester</label><select value={form.semester} onChange={e => setForm({ ...form, semester: Number(e.target.value) })}><option value={1}>1st</option><option value={2}>2nd</option></select></div></div>
-        <button className="btn btn-primary">Save course</button>
+        <div className="grid grid-2"><div className="field"><label>Grade</label><select required value={form.grade} onChange={e => { const item = grades.find(g => g.grade === e.target.value); setForm({ ...form, grade: e.target.value, grade_point: item?.point ?? 0 }) }}>{grades.map(item => <option key={item.grade} value={item.grade}>{item.grade} · {item.point}</option>)}</select></div><div className="field"><label>Semester</label><select value={form.semester} onChange={e => setForm({ ...form, semester: Number(e.target.value) })}><option value={1}>1st</option><option value={2}>2nd</option></select></div></div>
+        <button className="btn btn-primary" disabled={!grades.length}>Save course</button>
         {message && <div className="notice">{message}</div>}
       </form>
 
