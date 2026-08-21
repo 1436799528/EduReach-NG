@@ -1,0 +1,32 @@
+{
+  "name": "edureach-ng",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EduReach NG — a digital front desk for Nigerian tertiary students.",
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node db/migrate.mjs",
+    "db:seed": "node db/seed.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "2.4.3",
+    "jspdf": "2.5.1",
+    "next": "14.2.15",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "^22.20.1",
+    "@types/react": "18.3.5",
+    "@types/react-dom": "18.3.0",
+    "tsx": "4.19.1",
+    "typescript": "5.5.4",
+    "vitest": "2.1.1"
+  }
+}

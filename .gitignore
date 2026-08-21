@@ -1,28 +1,33 @@
-# Angular specific
+# Node modules and logs
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output
+/.next/
+/out/
 /dist/
 /out-tsc/
 /tmp/
 /coverage/
-/e2e/test-output/
-/.angular/
-.angular/
 
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
-
-# Environment files
-/.env
-
-# Angular CLI and build artefacts
-/.angular-cli.json
-/.ng/
-
-# TypeScript cache
+# Build artifacts
 *.tsbuildinfo
+next-env.d.ts
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Local database + uploaded files storage (never commit)
+/storage/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# OS / editor noise
+.DS_Store
+*.log
+
+# NOTE: lockfiles (package-lock.json) ARE committed on purpose.
+# Reproducible installs + Dependabot/npm-audit supply-chain scanning
+# depend on the lockfile being in version control.
