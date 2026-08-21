@@ -1,2 +1,22 @@
 import {createClient} from '@/lib/supabase/server'
-export default async function ResourcesPage(){const s=await createClient();const {data}=await s.from('resources').select('id,title,description,resource_type,external_url,file_url,created_at').eq('status','approved').order('created_at',{ascending:false}).limit(50);return <div><section className="service-card-container" style={{background:'var(--primary-navy)',color:'#fff',border:0,marginBottom:20}}><div className="eyebrow" style={{color:'#ffd2b9'}}>GET</div><h1 style={{color:'#fff',margin:'7px 0'}}>Past questions, forms & links</h1></section><div className="page-head"><div><div className="eyebrow">AVAILABLE</div><h2 style={{margin:'5px 0 0',fontSize:22}}>Open what you need</h2></div><span className="badge">{data?.length||0} resources</span></div>{data?.length?<div className="grid grid-2">{data.map(r=><article className="service-card-container" key={r.id}><div className="service-icon-badge" style={{background:'var(--secondary-orange)'}}>↗</div><h3 className="service-title" style={{marginTop:12,textTransform:'none'}}>{r.title}</h3>{r.description&&<p className="service-description">{r.description}</p>}<div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginTop:14}}><span className="badge">{(r.resource_type||'resource').replaceAll('_',' ')}</span>{(r.external_url||r.file_url)&&<a className="btn btn-secondary" href={r.external_url||r.file_url} target="_blank" rel="noreferrer">Open</a>}</div></article>)}</div>:<div className="service-card-container"><h3 className="service-title" style={{textTransform:'none'}}>No approved resources yet.</h3><a className="btn btn-primary" href="/app/search">Search school information</a></div>}</div>}
+
+export default async function ResourcesPage(){
+  const s=await createClient()
+  const {data}=await s.from('resources').select('id,title,description,resource_type,external_url,file_url,storage_path,created_at').eq('status','approved').order('created_at',{ascending:false}).limit(50)
+  return <div>
+    <section className="service-card-container" style={{background:'var(--primary-navy)',color:'#fff',border:0,marginBottom:20}}>
+      <div className="eyebrow" style={{color:'#ffd2b9'}}>GET</div>
+      <h1 style={{color:'#fff',margin:'7px 0'}}>Past questions, forms & links</h1>
+    </section>
+    <div className="page-head"><div><div className="eyebrow">AVAILABLE</div><h2 style={{margin:'5px 0 0',fontSize:22}}>Open what you need</h2></div><span className="badge">{data?.length||0} resources</span></div>
+    {data?.length?<div className="grid grid-2">{data.map(r=><article className="service-card-container" key={r.id}>
+      <div className="service-icon-badge" style={{background:'var(--secondary-orange)'}}><span className="material-symbols-rounded">open_in_new</span></div>
+      <h3 className="service-title" style={{marginTop:12,textTransform:'none'}}>{r.title}</h3>
+      {r.description&&<p className="service-description">{r.description}</p>}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginTop:14}}>
+        <span className="badge">{(r.resource_type||'resource').replaceAll('_',' ')}</span>
+        <a className="btn btn-secondary" href={`/api/resources/${r.id}/open`} target="_blank" rel="noreferrer">Open</a>
+      </div>
+    </article>)}</div>:<div className="service-card-container"><h3 className="service-title" style={{textTransform:'none'}}>No approved resources yet.</h3><a className="btn btn-primary" href="/app/search">Search school information</a></div>}
+  </div>
+}
