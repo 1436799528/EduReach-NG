@@ -17,6 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="pill-list mt-1">
           <Link className="pill" href="/admin">Overview</Link>
           {isAdmin ? <Link className="pill" href="/admin/announcements">Announcements</Link> : null}
+          {isAdmin ? <Link className="pill" href="/admin/directory">Directory</Link> : null}
           {isAdmin ? <Link className="pill" href="/admin/cutoffs">Cut-off marks</Link> : null}
           <Link className="pill" href="/admin/verification">Verification queue</Link>
           {isAdmin ? <Link className="pill" href="/admin/users">Users</Link> : null}

@@ -1,5 +1,6 @@
 import { createUser } from '@/lib/data/users';
 import { createEmailToken, createSession, findUserByEmail, hashPassword } from '@/lib/auth';
+import { isRealEmailConfigured, sendVerificationEmail } from '@/lib/email/provider';
 import { fail, getClientIp, logActivity, logAudit, ok, parseJson, rateLimit, tooMany } from '@/lib/api';
 import { registerSchema } from '@/lib/validation';
 
@@ -25,14 +26,18 @@ export async function POST(req: Request) {
   createSession(userId, { ip, userAgent: req.headers.get('user-agent') ?? undefined });
 
   const verifyToken = createEmailToken(userId, 'VERIFY_EMAIL', 24 * 60);
+  const origin = new URL(req.url).origin;
+  const verifyUrl = `${origin}/verify-email?token=${verifyToken}`;
+  await sendVerificationEmail(normalizedEmail, fullName, verifyUrl);
+
   logActivity(userId, 'ACCOUNT_CREATED', 'Created an EduReach account');
   logAudit({ userId, action: 'AUTH_REGISTER', ip });
 
   return ok({
     ok: true,
     next: '/onboarding',
-    // Shown only in development — production sends this link by email (§8).
-    ...(process.env.NODE_ENV !== 'production'
+    // In development (no email transport), surface the link directly (§8).
+    ...(process.env.NODE_ENV !== 'production' && !isRealEmailConfigured()
       ? { devVerifyUrl: `/verify-email?token=${verifyToken}` }
       : {})
   }, 201);

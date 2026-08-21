@@ -205,6 +205,45 @@ export function markAllRead(userId: string): void {
   run('UPDATE notifications SET read = 1 WHERE user_id = ?', [userId]);
 }
 
+/**
+ * Derived reminder items (§17, §22): pending deadlines inside their remind
+ * window (or overdue) become notification feed entries without needing a
+ * cron job. Flagged `derived` — they cannot be "read", they expire by time.
+ */
+export interface DerivedReminder {
+  id: string;
+  title: string;
+  body: string;
+  link: string;
+  derived: true;
+  created_at: string;
+}
+
+export function derivedDeadlineReminders(userId: string): DerivedReminder[] {
+  const now = Date.now();
+  const overdueCutoff = new Date(now - 30 * 24 * 3600 * 1000).toISOString();
+  const rows = all<DeadlineRow>(
+    `SELECT * FROM deadlines WHERE user_id = ? AND status = 'PENDING' AND due_at >= ? ORDER BY due_at ASC LIMIT 40`,
+    [userId, overdueCutoff]
+  );
+  const items: DerivedReminder[] = [];
+  for (const d of rows) {
+    const days = Math.ceil((new Date(d.due_at).getTime() - now) / (24 * 3600 * 1000));
+    if (days > d.remind_days) continue; // not inside its reminder window yet
+    const when = days < 0 ? `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago` : days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+    const overdue = days < 0;
+    items.push({
+      id: `dl-${d.id}`,
+      title: overdue ? `Overdue: ${d.title}` : `${d.type === 'EXAM' ? 'Exam' : d.type.charAt(0) + d.type.slice(1).toLowerCase().replace(/_/g, ' ')} reminder: ${d.title}`,
+      body: `${d.type.replace(/_/g, ' ')}${d.course ? ` · ${d.course}` : ''} — due ${when}${d.location ? ` at ${d.location}` : ''}.`,
+      link: '/deadlines',
+      derived: true,
+      created_at: d.due_at
+    });
+  }
+  return items.sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
 export function createNotification(userId: string, title: string, body: string, link: string | null): void {
   run('INSERT INTO notifications (id, user_id, title, body, link, read, created_at) VALUES (?,?,?,?,?,0,?)', [
     uid(), userId, title, body, link, nowIso()
@@ -230,7 +269,7 @@ export function fanOutAnnouncementNotification(announcementId: string, title: st
   const now = nowIso();
   for (const r of recipients) {
     run('INSERT INTO notifications (id, user_id, title, body, link, read, created_at) VALUES (?,?,?,?,?,0,?)', [
-      uid(), r.id, title, summary, `/check#${announcementId}`, now
+      uid(), r.id, title, summary, `/check/${announcementId}`, now
     ]);
   }
   return recipients.length;

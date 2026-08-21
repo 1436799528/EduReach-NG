@@ -1,4 +1,5 @@
 import { createEmailToken, findUserByEmail } from '@/lib/auth';
+import { isRealEmailConfigured, sendPasswordResetEmail } from '@/lib/email/provider';
 import { getClientIp, logAudit, ok, parseJson, rateLimit, tooMany } from '@/lib/api';
 import { passwordResetRequestSchema } from '@/lib/validation';
 
@@ -16,8 +17,12 @@ export async function POST(req: Request) {
   let devResetUrl: string | undefined;
   if (user && user.status === 'ACTIVE') {
     const token = createEmailToken(user.id, 'PASSWORD_RESET', 60);
+    const url = `${new URL(req.url).origin}/reset-password?token=${token}`;
+    await sendPasswordResetEmail(user.email, url);
     logAudit({ userId: user.id, action: 'AUTH_RESET_REQUESTED', ip });
-    if (process.env.NODE_ENV !== 'production') devResetUrl = `/reset-password?token=${token}`;
+    if (process.env.NODE_ENV !== 'production' && !isRealEmailConfigured()) {
+      devResetUrl = `/reset-password?token=${token}`;
+    }
   }
 
   // Identical response whether or not the account exists (no enumeration).

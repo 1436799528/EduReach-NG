@@ -34,6 +34,7 @@ export function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
       </div>
       <div className="sidebar__group">
         <div className="sidebar__label">Your space</div>
+        <NavLink href="/contribute" icon={<IconCheck size={18} />} label="Submit an update" active={starts('/contribute')} />
         <NavLink href="/me/school" icon={<IconSchool size={18} />} label="My School" active={starts('/me/school')} />
         <NavLink href="/me/documents" icon={<IconDoc size={18} />} label="My Documents" active={starts('/me/documents')} />
         <NavLink href="/deadlines" icon={<IconCalendar size={18} />} label="Deadlines" active={starts('/deadlines')} />
@@ -107,6 +108,7 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [reminders, setReminders] = useState<NotificationItem[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,12 +124,13 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
     if (!res.ok) return;
     const data = await res.json();
     setItems(data.notifications);
+    setReminders(data.reminders ?? []);
     setUnread(data.unread);
   }
 
   async function markRead() {
     await fetch('/api/notifications/read', { method: 'POST' });
-    setUnread(0);
+    load();
   }
 
   return (
@@ -147,11 +150,22 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
         <div className="menu__panel" style={{ width: 340 }}>
           <div className="row spread mb-1" style={{ padding: '4px 8px' }}>
             <strong>Notifications</strong>
-            {unread > 0 ? (
-              <button className="btn btn--ghost btn--sm" onClick={markRead}>Mark all read</button>
-            ) : null}
+            <button className="btn btn--ghost btn--sm" onClick={markRead}>Mark read</button>
           </div>
-          {items.length === 0 ? (
+          {reminders.length > 0 ? (
+            <>
+              <div className="small muted" style={{ padding: '2px 12px 6px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.06em' }}>Reminders</div>
+              {reminders.map((n) => (
+                <Link key={n.id} href={n.link ?? '/deadlines'} className="menu__item" onClick={() => setOpen(false)}>
+                  <span style={{ flex: 1 }}>
+                    <strong style={{ display: 'block', fontSize: '0.88rem' }}>{n.title}</strong>
+                    <span className="small muted">{n.body}</span>
+                  </span>
+                </Link>
+              ))}
+            </>
+          ) : null}
+          {items.length === 0 && reminders.length === 0 ? (
             <p className="small muted" style={{ padding: '8px 12px' }}>You&apos;re all caught up.</p>
           ) : (
             items.slice(0, 12).map((n) => (
