@@ -1,0 +1,5 @@
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+
+const links=[['Dashboard','/app'],['Write It','/app/write'],['Calculate','/app/tools/gpa'],['Updates','/app/updates'],['My School','/app/school'],['Resources','/app/resources'],['Ask','/app/ask'],['Search','/app/search']]
+export default async function AppLayout({children}:{children:React.ReactNode}){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();return <div className="app-layout"><aside className="sidebar"><Link href="/app" className="logo">EduReach <span>Hub</span></Link>{links.map(([n,h])=><Link className="side-link" href={h} key={h}>{n}</Link>)}<div style={{marginTop:'auto'}}><div className="side-link" style={{fontSize:12,opacity:.75}}>{user?.email}</div><form action="/auth/signout" method="post"><button className="side-link" style={{background:'transparent',border:0,width:'100%',textAlign:'left'}}>Sign out</button></form></div></aside><main className="main">{children}</main></div>}
